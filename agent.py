@@ -109,12 +109,20 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     # 2. Call search_listings() with parsed parameters
     count += 1
     trace.check_iterations(count)
-
+    """
     search_results = search_listings(
         description=session["parsed"]["description"],
         size=session["parsed"]["size"],
         max_price=session["parsed"]["max_price"],
     )
+    """
+    from mcp_client import call_tool
+    search_results = call_tool("search_listings", {
+        "description":session["parsed"]["description"],
+        "size":session["parsed"]["size"],
+        "max_price":session["parsed"]["max_price"],
+
+    })
     session["search_results"] = search_results
 
     # ⚠️ BRANCH: If nothing came back, halt and explain what to change
