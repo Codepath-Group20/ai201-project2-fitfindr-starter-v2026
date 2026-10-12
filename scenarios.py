@@ -9,8 +9,8 @@ and this file is where you write it down.
 `run_eval.py` runs everything here five times and writes the run log — five
 because your criteria are written out of five.
 
-Three scenarios are filled in to show the shape. Add or change whatever your
-own criteria need — these are a starting point, not a fixed set.
+Three scenarios are filled in to show the shape; the rest are added below
+to cover criteria 3, 4, and 5.
 """
 
 SCENARIOS = [
@@ -29,24 +29,33 @@ SCENARIOS = [
         "criterion": 2,
     },
     {
-        # A user with nothing saved. One of unit 4's three failure modes.
+        # State tracking check. Criterion 3.
+        "name": "state data integrity check",
+        "query": "denim jacket under $50",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    {
+        # Fit card price and platform verification. Criterion 4.
+        "name": "fit card price and platform check",
+        "query": "Y2K baby tee under $25",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        # Budget ceiling strict enforcement check. Criterion 5.
+        "name": "strict budget price ceiling check",
+        "query": "leather boots under $40",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
+    {
+        # A user with nothing saved. Diagnostic run.
         "name": "empty wardrobe",
         "query": "denim jacket under $50",
         "wardrobe": "empty",
         "criterion": None,
     },
-    # TODO: add what your criteria 3, 4 and 5 need.
-    #
-    # Set "criterion" to the number in criteria.md that the scenario tests.
-    # "criterion": None means a diagnostic run — useful to have, but it isn't
-    # one of your five, and run_eval.py marks it as such in the table.
-    #
-    # For a state criterion, any normal query works — what you're checking is
-    # what ends up in the session, not what the user typed.
-    #
-    # For a fit-card criterion, you probably want the SAME query listed more
-    # than once, or several different items, depending on what your criterion
-    # actually says.
 ]
 
 WARDROBES = ("example", "empty")
