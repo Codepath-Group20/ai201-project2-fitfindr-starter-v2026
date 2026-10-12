@@ -109,21 +109,16 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     # 2. Call search_listings() with parsed parameters
     count += 1
     trace.check_iterations(count)
-    """
-    search_results = search_listings(
-        description=session["parsed"]["description"],
-        size=session["parsed"]["size"],
-        max_price=session["parsed"]["max_price"],
-    )
-    """
-    from mcp_client import call_tool
-    search_results = call_tool("search_listings", {
-        "description":session["parsed"]["description"],
-        "size":session["parsed"]["size"],
-        "max_price":session["parsed"]["max_price"],
 
-    })
+    from mcp_client import call_tool
+    search_inputs = {
+        "description": session["parsed"]["description"],
+        "size": session["parsed"]["size"],
+        "max_price": session["parsed"]["max_price"],
+    }
+    search_results = call_tool("search_listings", search_inputs)
     session["search_results"] = search_results
+    trace.step("search_listings", search_inputs, search_results)
 
     # ⚠️ BRANCH: If nothing came back, halt and explain what to change
     if not search_results:
@@ -144,15 +139,19 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     count += 1
     trace.check_iterations(count)
 
+    outfit_inputs = {"selected_item": selected_item, "wardrobe": wardrobe}
     outfit_suggestion = suggest_outfit(selected_item, wardrobe)
     session["outfit_suggestion"] = outfit_suggestion
+    trace.step("suggest_outfit", outfit_inputs, outfit_suggestion)
 
     # 5. Call create_fit_card() with the outfit and item
     count += 1
     trace.check_iterations(count)
 
+    fit_card_inputs = {"outfit_suggestion": outfit_suggestion, "selected_item": selected_item}
     fit_card = create_fit_card(outfit_suggestion, selected_item)
     session["fit_card"] = fit_card
+    trace.step("create_fit_card", fit_card_inputs, fit_card)
 
     return session
 
@@ -190,3 +189,12 @@ if __name__ == "__main__":
         "\nThe second one should stop before the fit card. If both paths look "
         "the same,\nthe branch isn't doing anything yet."
     )
+
+"""
+
+---
+
+### How to test your trace:
+Run a query with the `--trace` flag
+```bash python app.py ask 'vintage graphic tee under $30' --trace
+"""
