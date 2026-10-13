@@ -61,7 +61,8 @@ def step(name: str, inputs=None, returned=None, note: str = "") -> None:
         line += f"\n      →    {note}"
 
     _lines.append(line)
-    print(line, flush=True)
+    # Note: Removed print(line) here so it doesn't print twice. 
+    # app.py will print the whole block at the end if --trace is used.
 
 
 def get_trace() -> str:

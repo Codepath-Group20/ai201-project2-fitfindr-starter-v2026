@@ -70,8 +70,8 @@ def cmd_listings(args):
 
     if args.full:
         import json
-        for listing in listings[: args.n]:
-            print(json.dumps(listing, indent=2))
+        for listings_item in listings[: args.n]:
+            print(json.dumps(listings_item, indent=2))
             print()
         return
 
@@ -113,6 +113,11 @@ def _ask_one(query, wardrobe, use_trace):
 
     session = run_agent(query, wardrobe)
 
+    if use_trace:
+        print("\n--- Loop Trace ---")
+        print(trace_module.get_trace())
+        print("------------------")
+
     print()
     if session["error"]:
         print(f"  {session['error']}")
@@ -125,13 +130,6 @@ def _ask_one(query, wardrobe, use_trace):
         print(f"  Fit card: {session['fit_card']}")
     print()
 
-    if use_trace:
-        text = trace_module.get_trace()
-        if not text:
-            print(
-                "  (--trace printed nothing. You haven't added trace.step() calls to\n"
-                "   run_agent() yet — that's unit 4, Milestone 2.)\n"
-            )
     return session
 
 
