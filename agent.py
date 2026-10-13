@@ -3,71 +3,38 @@ The FitFindr planning loop.
 
 This is the file that makes FitFindr an agent rather than a script. It decides
 which tool to run next based on what the last one returned.
-
-If your loop calls all three tools no matter what comes back, you have a list
-of function calls. A loop looks at the last result before it picks the next
-step. **That branch is the graded part of this unit.**
-
-Build and test your three tools in `tools.py` first. Then come here.
-
-    python agent.py          runs both example paths below
 """
 
 import re
 import config
 import trace
 from tools import search_listings, suggest_outfit, create_fit_card
-from generate import ModelUnavailable
 
 
 # ── session state ─────────────────────────────────────────────────────────────
 
 def new_session(query: str, wardrobe: dict) -> dict:
-    """
-    A fresh session for one user interaction.
-
-    The session is the single source of truth for a run. Every tool result goes
-    in here, and the next tool reads it back out.
-
-    You could pass values straight from one call to the next. It would work,
-    and you would not be able to test it — you can't print a variable you have
-    already overwritten. Going through the session is what makes the state
-    visible, and unit 4 has you write a criterion about exactly that.
-
-    Add fields if you need them.
-    """
+    """A fresh session for one user interaction."""
     return {
-        "query": query,              # what the user typed
-        "parsed": {},                # description / size / max_price you pulled out of it
-        "search_results": [],        # everything search_listings returned
-        "selected_item": None,       # the one you chose — goes into suggest_outfit
-        "wardrobe": wardrobe,        # the user's wardrobe
-        "outfit_suggestion": None,   # what suggest_outfit returned
-        "fit_card": None,            # what create_fit_card returned
-        "error": None,               # set when the run ended early
+        "query": query,
+        "parsed": {},
+        "search_results": [],
+        "selected_item": None,
+        "wardrobe": wardrobe,
+        "outfit_suggestion": None,
+        "fit_card": None,
+        "error": None,
     }
 
 
 # ── planning loop ─────────────────────────────────────────────────────────────
 
 def run_agent(query: str, wardrobe: dict) -> dict:
-    """
-    Run the loop once and return the finished session.
-
-    Args:
-        query:    what the user asked for, in plain language
-                  (e.g. "vintage graphic tee under $30, size M").
-        wardrobe: a wardrobe dict — get_example_wardrobe() or
-                  get_empty_wardrobe() from utils/data_loader.py.
-
-    Returns:
-        The session dict. **Check session["error"] first** — if it isn't None,
-        the run ended early and the later fields will still be None.
-    """
+    """Run the loop once and return the finished session."""
     session = new_session(query, wardrobe)
     count = 0
 
-    # 1. Parse the query into description, size, and max_price
+    # 1. Parse the query
     count += 1
     trace.check_iterations(count)
 
@@ -75,19 +42,16 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     max_price = None
     size = None
 
-    # Extract price ceiling (e.g. "under $30", "$30")
     price_match = re.search(r'(?:under|less than|<)\s*\$?(\d+(?:\.\d+)?)', query_lower)
     if not price_match:
         price_match = re.search(r'\$(\d+(?:\.\d+)?)', query_lower)
     if price_match:
         max_price = float(price_match.group(1))
 
-    # Extract size (e.g. "size M", "size XXS")
     size_match = re.search(r'size\s+([a-zA-Z0-9/_]+)', query_lower)
     if size_match:
         size = size_match.group(1)
 
-    # Extract description by stripping out price and size phrases
     desc = query_lower
     if price_match:
         desc = re.sub(r'(?:under|less than|<)?\s*\$?\d+(?:\.\d+)?', '', desc)
@@ -105,8 +69,9 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         "size": size,
         "max_price": max_price,
     }
+    trace.step("parse_query", inputs={"query": query}, returned=session["parsed"])
 
-    # 2. Call search_listings() with parsed parameters
+    # 2. Call search_listings()
     count += 1
     trace.check_iterations(count)
 
@@ -118,40 +83,50 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     }
     search_results = call_tool("search_listings", search_inputs)
     session["search_results"] = search_results
-    trace.step("search_listings", search_inputs, search_results)
+    trace.step("search_listings (via MCP)", inputs=search_inputs, returned=search_results)
 
-    # ⚠️ BRANCH: If nothing came back, halt and explain what to change
+    # 3. Branch Check (explicit trace for the branch evaluation)
+    count += 1
+    trace.check_iterations(count)
+    
+    branch_inputs = {"search_results_count": len(search_results)}
     if not search_results:
-        session["error"] = (
-            f"No matching listings found for '{query}'. "
-            f"Try broadening your search keywords, increasing your maximum price, or removing size restrictions."
-        )
+        session["error"] = f"No matching listings found for '{query}'."
+        trace.step("branch_check", inputs=branch_inputs, note="branch: empty, stopping run")
+        trace.step("final_session_state", inputs={"error": session["error"]}, returned=session)
         return session
 
-    # 3. Choose an item (first result) and store in session state
+    trace.step("branch_check", inputs=branch_inputs, note="branch: match found, continuing")
+
+    # 4. Choose an item
     count += 1
     trace.check_iterations(count)
 
-    selected_item = search_results[0]
-    session["selected_item"] = selected_item
+    session["selected_item"] = search_results[0]
+    select_inputs = {"available_count": len(search_results), "choice_index": 0}
+    trace.step("select_item", inputs=select_inputs, returned=session["selected_item"])
 
-    # 4. Call suggest_outfit() with the selected item and wardrobe
+    # 5. Suggest outfit
     count += 1
     trace.check_iterations(count)
 
-    outfit_inputs = {"selected_item": selected_item, "wardrobe": wardrobe}
-    outfit_suggestion = suggest_outfit(selected_item, wardrobe)
-    session["outfit_suggestion"] = outfit_suggestion
-    trace.step("suggest_outfit", outfit_inputs, outfit_suggestion)
+    outfit_inputs = {"selected_item": session["selected_item"], "wardrobe_keys": list(wardrobe.keys())}
+    session["outfit_suggestion"] = suggest_outfit(session["selected_item"], wardrobe)
+    trace.step("suggest_outfit", inputs=outfit_inputs, returned=session["outfit_suggestion"])
 
-    # 5. Call create_fit_card() with the outfit and item
+    # 6. Create fit card
     count += 1
     trace.check_iterations(count)
 
-    fit_card_inputs = {"outfit_suggestion": outfit_suggestion, "selected_item": selected_item}
-    fit_card = create_fit_card(outfit_suggestion, selected_item)
-    session["fit_card"] = fit_card
-    trace.step("create_fit_card", fit_card_inputs, fit_card)
+    fit_card_inputs = {"outfit_suggestion": session["outfit_suggestion"], "selected_item": session["selected_item"]}
+    session["fit_card"] = create_fit_card(session["outfit_suggestion"], session["selected_item"])
+    trace.step("create_fit_card", inputs=fit_card_inputs, returned=session["fit_card"])
+
+    # 7. Observe final session state in the trace
+    count += 1
+    trace.check_iterations(count)
+    session_inputs = {"status": "complete"}
+    trace.step("final_session_state", inputs=session_inputs, returned=session, note="session populated successfully")
 
     return session
 
@@ -161,7 +136,6 @@ def run_agent(query: str, wardrobe: dict) -> dict:
 def _show(session: dict) -> None:
     if session["error"]:
         print(f"  stopped: {session['error']}")
-        print(f"  fit_card is {session['fit_card']!r} — it should still be None here")
         return
 
     item = session["selected_item"] or {}
@@ -173,28 +147,8 @@ def _show(session: dict) -> None:
 if __name__ == "__main__":
     from utils.data_loader import get_example_wardrobe
 
-    print("=== A query the data can match ===")
+    print("=== Successful Path Trace (Full Inputs) ===")
     _show(run_agent(
         query="looking for a vintage graphic tee under $30",
         wardrobe=get_example_wardrobe(),
     ))
-
-    print("\n=== A query it can't ===")
-    _show(run_agent(
-        query="designer ballgown size XXS under $5",
-        wardrobe=get_example_wardrobe(),
-    ))
-
-    print(
-        "\nThe second one should stop before the fit card. If both paths look "
-        "the same,\nthe branch isn't doing anything yet."
-    )
-
-"""
-
----
-
-### How to test your trace:
-Run a query with the `--trace` flag
-```bash python app.py ask 'vintage graphic tee under $30' --trace
-"""

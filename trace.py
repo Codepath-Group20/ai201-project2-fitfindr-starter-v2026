@@ -43,7 +43,7 @@ def step(name: str, inputs=None, returned=None, note: str = "") -> None:
     Record one step of the loop.
 
     Args:
-        name:     what happened — usually a tool name.
+        name:     what happened — usually a tool name or internal action.
         inputs:   what went in. Anything printable.
         returned: what came back. Shortened automatically, so passing a long
                   list of listings is fine.
@@ -61,8 +61,6 @@ def step(name: str, inputs=None, returned=None, note: str = "") -> None:
         line += f"\n      →    {note}"
 
     _lines.append(line)
-    # Note: Removed print(line) here so it doesn't print twice. 
-    # app.py will print the whole block at the end if --trace is used.
 
 
 def get_trace() -> str:
