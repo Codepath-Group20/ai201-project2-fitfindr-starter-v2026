@@ -1,0 +1,23 @@
+graph TD
+    subgraph Entry Points & Runners
+        app[app.py <br/> CLI & User Interface] --> agent[agent.py <br/> Planning Loop & Session]
+        eval[run_eval.py <br/> Evaluation Runner] --> agent
+        test[test.py <br/> Unit Testing] --> agent
+    end
+
+    subgraph Core Agent & State Management
+        agent --> trace[trace.py <br/> Step Logging & Formatting]
+        agent --> config[config.py <br/> Settings & Limits]
+    end
+
+    subgraph Execution & Tool Layers
+        agent --> tools[tools.py <br/> Local Tools: Outfit & Fit Card]
+        agent --> mcpClient[mcp_client.py <br/> MCP Client Wrapper]
+        mcpClient -.->|stdio Subprocess Pipe| mcpServer[mcp_server.py <br/> MCP Server: Search Listings]
+    end
+
+    subgraph Utilities & Data
+        tools --> generate[generate.py <br/> LLM Model Wrapper]
+        tools --> data[data/ <br/> Wardrobe & Listings JSON]
+        agent --> utils[utils/ <br/> Data Loaders & Helpers]
+    end

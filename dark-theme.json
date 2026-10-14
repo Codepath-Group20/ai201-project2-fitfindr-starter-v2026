@@ -1,0 +1,13 @@
+{
+  "theme": "dark",
+  "themeVariables": {
+    "darkMode": true,
+    "background": "#1e1e1e",
+    "primaryColor": "#2d3748",
+    "primaryTextColor": "#e2e8f0",
+    "primaryBorderColor": "#4a5568",
+    "lineColor": "#a0aec0",
+    "secondaryColor": "#2b6cb0",
+    "tertiaryColor": "#2c5282"
+  }
+}
